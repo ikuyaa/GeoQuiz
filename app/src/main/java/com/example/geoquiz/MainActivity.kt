@@ -7,6 +7,8 @@ import android.view.View
 import android.widget.Button
 import android.widget.Toast
 import com.example.geoquiz.databinding.ActivityMainBinding
+import com.google.android.material.snackbar.BaseTransientBottomBar
+import com.google.android.material.snackbar.Snackbar
 
 private const val TAG = "MainActivity"
 
@@ -23,6 +25,9 @@ class MainActivity : AppCompatActivity() {
     )
 
     private var currentIndex = 0
+    private var questionsAnswered = 0
+    private var amtRight = 0
+    private var amtWrong = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +50,13 @@ class MainActivity : AppCompatActivity() {
 
         binding.nextButton.setOnClickListener {
             currentIndex = (currentIndex + 1) % questionBank.size
+            updateQuestion()
+        }
+
+        binding.previousButton.setOnClickListener{
+            if(currentIndex == 0) return@setOnClickListener
+
+            currentIndex = (currentIndex - 1) % questionBank.size
             updateQuestion()
         }
 
@@ -77,19 +89,65 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateQuestion(){
+        isQuizOver()
         val questionTextResId = questionBank[currentIndex].textResId
+        isQuestionAnswered(currentIndex)
         binding.questionTextView.setText(questionTextResId)
     }
 
     private fun checkAnswer(userAnswer: Boolean){
+        hideButtons()
         val correctAnswer = questionBank[currentIndex].answer
-
-        var messageResId = if(userAnswer == correctAnswer){
+        val messageResId = if(userAnswer == correctAnswer){
             R.string.correct_toast
         } else {
             R.string.incorrect_toast
         }
 
-        Toast.makeText(this, messageResId, Toast.LENGTH_SHORT).show()
+        if(userAnswer == correctAnswer)
+            amtRight++
+        else
+            amtWrong++
+
+        questionBank[currentIndex].answered = true;
+        questionsAnswered++
+        Snackbar.make(this, this.findViewById(android.R.id.content), getString(messageResId), Snackbar.LENGTH_SHORT).show()
+
+        //Toast.makeText(this, messageResId, Toast.LENGTH_SHORT).show()
+    }
+
+    private fun isQuestionAnswered(index: Int){
+        val isAnswered = questionBank[index].answered;
+        binding.trueButton.isEnabled = !isAnswered;
+        binding.falseButton.isEnabled = !isAnswered;
+
+    }
+
+    private fun hideButtons(){
+        binding.trueButton.isEnabled = false;
+        binding.falseButton.isEnabled = false;
+    }
+
+    private fun isQuizOver(){
+        if(questionsAnswered >= questionBank.size){
+            val percent = (amtRight * 100)  / questionBank.size
+            val quizSnackBar = Snackbar.make(this, this.findViewById(android.R.id.content), "Quiz over. You got ${percent}% right!"
+                , Snackbar.LENGTH_SHORT).addCallback(object: BaseTransientBottomBar.BaseCallback<Snackbar>() {
+                override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
+                    super.onDismissed(transientBottomBar, event)
+                    for(question in questionBank){
+                        question.answered = false
+                    }
+                    currentIndex = 0;
+                    questionsAnswered = 0
+                    amtRight = 0
+                    amtWrong = 0
+                    updateQuestion()
+                }
+                }).show();
+
+
+        }
+
     }
 }
