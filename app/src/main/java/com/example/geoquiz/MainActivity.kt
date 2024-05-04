@@ -4,30 +4,18 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
 import android.view.View
-import android.widget.Button
-import android.widget.Toast
+import androidx.activity.viewModels
+import androidx.lifecycle.ViewModel
 import com.example.geoquiz.databinding.ActivityMainBinding
 import com.google.android.material.snackbar.BaseTransientBottomBar
 import com.google.android.material.snackbar.Snackbar
+
 
 private const val TAG = "MainActivity"
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-
-    private val questionBank = listOf(
-        Question(R.string.question_australia, true),
-        Question(R.string.question_oceans, true),
-        Question(R.string.question_mideast, false),
-        Question(R.string.question_africa, false),
-        Question(R.string.question_americas, true),
-        Question(R.string.question_asia, true)
-    )
-
-    private var currentIndex = 0
-    private var questionsAnswered = 0
-    private var amtRight = 0
-    private var amtWrong = 0
+    private val quizViewModel: QuizViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,6 +23,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+        Log.d(TAG, "Got a QuizViewModel: $quizViewModel")
 
         //Setting True Button Listener Event
         binding.trueButton.setOnClickListener{view: View ->
@@ -49,14 +38,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.nextButton.setOnClickListener {
-            currentIndex = (currentIndex + 1) % questionBank.size
+            quizViewModel.moveToNext()
             updateQuestion()
         }
 
         binding.previousButton.setOnClickListener{
-            if(currentIndex == 0) return@setOnClickListener
+            if(quizViewModel.currentIndex == 0) return@setOnClickListener
 
-            currentIndex = (currentIndex - 1) % questionBank.size
+            quizViewModel.moveToPrevious()
             updateQuestion()
         }
 
@@ -89,15 +78,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun updateQuestion(){
+        val questionTextResId = quizViewModel.currentQuestionText
         isQuizOver()
-        val questionTextResId = questionBank[currentIndex].textResId
-        isQuestionAnswered(currentIndex)
+        isQuestionAnswered(quizViewModel.currentIndex)
         binding.questionTextView.setText(questionTextResId)
     }
 
     private fun checkAnswer(userAnswer: Boolean){
         hideButtons()
-        val correctAnswer = questionBank[currentIndex].answer
+        val correctAnswer = quizViewModel.currentQuestionAnswer
         val messageResId = if(userAnswer == correctAnswer){
             R.string.correct_toast
         } else {
@@ -105,19 +94,19 @@ class MainActivity : AppCompatActivity() {
         }
 
         if(userAnswer == correctAnswer)
-            amtRight++
+            quizViewModel.amtRight++
         else
-            amtWrong++
+            quizViewModel.amtWrong++
 
-        questionBank[currentIndex].answered = true;
-        questionsAnswered++
+        quizViewModel.setQuestionAnswered()
+        quizViewModel.questionsAnswered++
         Snackbar.make(this, this.findViewById(android.R.id.content), getString(messageResId), Snackbar.LENGTH_SHORT).show()
 
         //Toast.makeText(this, messageResId, Toast.LENGTH_SHORT).show()
     }
 
     private fun isQuestionAnswered(index: Int){
-        val isAnswered = questionBank[index].answered;
+        val isAnswered = quizViewModel.isQuestionAnwered;
         binding.trueButton.isEnabled = !isAnswered;
         binding.falseButton.isEnabled = !isAnswered;
 
@@ -129,25 +118,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun isQuizOver(){
-        if(questionsAnswered >= questionBank.size){
-            val percent = (amtRight * 100)  / questionBank.size
+        if(quizViewModel.questionsAnswered >= quizViewModel.questionBank.size){
+            val percent = (quizViewModel.amtRight * 100)  / quizViewModel.questionBank.size
             val quizSnackBar = Snackbar.make(this, this.findViewById(android.R.id.content), "Quiz over. You got ${percent}% right!"
                 , Snackbar.LENGTH_SHORT).addCallback(object: BaseTransientBottomBar.BaseCallback<Snackbar>() {
                 override fun onDismissed(transientBottomBar: Snackbar?, event: Int) {
                     super.onDismissed(transientBottomBar, event)
-                    for(question in questionBank){
+                    for(question in quizViewModel.questionBank){
                         question.answered = false
                     }
-                    currentIndex = 0;
-                    questionsAnswered = 0
-                    amtRight = 0
-                    amtWrong = 0
+                    quizViewModel.resetCurrentIndex()
+                    quizViewModel.questionsAnswered = 0
+                    quizViewModel.amtRight = 0
+                    quizViewModel.amtWrong = 0
                     updateQuestion()
                 }
                 }).show();
-
-
         }
-
     }
 }
