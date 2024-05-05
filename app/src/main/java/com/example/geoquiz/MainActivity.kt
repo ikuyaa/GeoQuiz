@@ -73,6 +73,11 @@ class MainActivity : AppCompatActivity() {
             cheatLauncher.launch(intent)
         }
 
+        binding.questionTextView.setOnClickListener(){
+            quizViewModel.moveToNext()
+            updateQuestion()
+        }
+
         updateQuestion()
     }
 
