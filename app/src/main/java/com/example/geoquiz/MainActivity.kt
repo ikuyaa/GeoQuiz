@@ -30,6 +30,7 @@ class MainActivity : AppCompatActivity() {
             quizViewModel.isCheater =
                 result.data?.getBooleanExtra(EXTRA_ANSWER_SHOWN, false)?: false
 
+            //This is where we set the question to be cheated on
             quizViewModel.questionBank[quizViewModel.currentIndex].cheated = true
         }
     }
